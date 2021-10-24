@@ -5,13 +5,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
-using Microsoft.Extensions.Logging;
 using ProductManagement.Business;
 using ProductManagement.Data;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Net;
+using Microsoft.AspNetCore.Diagnostics;
+using Newtonsoft.Json;
+using Microsoft.AspNetCore.Http;
 
 namespace ProductManagement.Api
 {
@@ -27,8 +27,19 @@ namespace ProductManagement.Api
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddControllers().ConfigureApiBehaviorOptions(options =>
+            {
+                options.InvalidModelStateResponseFactory = context =>
+                {
+                    var invalidProp = context.ModelState.First(prop => prop.Value.Errors.Count > 0);
 
-            services.AddControllers();
+                    return new JsonResult(new
+                    {
+                        Message = $"{invalidProp.Key}: {invalidProp.Value.Errors.FirstOrDefault()?.ErrorMessage}"
+                    });
+                };
+            });
+
             services.AddBusiness();
             services.AddData();
             services.AddSwaggerGen(c =>
@@ -47,6 +58,19 @@ namespace ProductManagement.Api
 
             app.UseSwagger();
             app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "ProductManagement.Api v1"));
+
+            app.UseExceptionHandler(new ExceptionHandlerOptions
+            {
+                ExceptionHandler = context =>
+                {
+                    context.Response.ContentType = "application/json";
+                    context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+
+                    var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+
+                    return context.Response.WriteAsync(JsonConvert.SerializeObject(new { Error = exception.Message }));
+                }
+            });
 
             app.UseRouting();
 
