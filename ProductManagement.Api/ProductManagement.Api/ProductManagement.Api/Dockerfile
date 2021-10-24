@@ -12,6 +12,10 @@ COPY . .
 WORKDIR "/src/ProductManagement.Api"
 RUN dotnet build "ProductManagement.Api.csproj" -c Release -o /app/build
 
+FROM build AS test
+WORKDIR "/src/ProductManagement.Business.Test"
+RUN dotnet test -c Release -o /test
+
 FROM build AS publish
 RUN dotnet publish "ProductManagement.Api.csproj" -c Release -o /app/publish
 
