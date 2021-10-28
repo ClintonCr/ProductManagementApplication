@@ -1,0 +1,13 @@
+version: '3.4'
+
+services:
+  product.api:
+    container_name: productmanagement-api
+    build:
+      context: ./ProductManagement.Api
+      dockerfile: ./ProductManagement.Api/Dockerfile
+    expose:
+      - 80
+    ports:
+      - "8081:80"
+     
